@@ -1,0 +1,12 @@
+version: '3.7'
+
+services:
+  dockergraf:
+    container_name: dockergraf
+    build:
+      context: .
+      dockerfile: Dockerfile 
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - '.:/usr/src/app'
