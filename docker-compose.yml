@@ -1,8 +1,8 @@
 version: '3.7'
 
 services:
-  dockergraf:
-    container_name: dockergraf
+  dockergram:
+    container_name: dockergram
     build:
       context: .
       dockerfile: Dockerfile 
