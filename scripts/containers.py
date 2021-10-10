@@ -2,7 +2,7 @@ import docker
 
 client = docker.from_env()
 
-def showContainers():
+def showContainers(*status):
     show_containers = []
     containers = client.containers.list()
     for container in containers:
@@ -14,3 +14,10 @@ def showContainers():
         show_containers.append(container_data)
 
     return show_containers
+
+def showLogs(name):
+    container_logs = ""
+    container = client.containers.get(name)
+    container_logs = container.logs().decode("utf-8")
+
+    return container_logs
