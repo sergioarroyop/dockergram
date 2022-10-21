@@ -21,3 +21,9 @@ def showLogs(name):
     container_logs = container.logs().decode("utf-8")
 
     return container_logs
+
+def stopContainer(name):
+    container = client.containers.get(name)
+    stopContainer = container.stop()
+
+    return stopContainer

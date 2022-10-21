@@ -1,20 +1,22 @@
+from cgi import test
 from telegram.ext import Updater
 from telegram.ext.filters import Filters
 from telegram.ext import CommandHandler, MessageHandler, ConversationHandler
 from telegram import ReplyKeyboardMarkup
 from dotenv import load_dotenv
 import emoji
+import re
 import docker
 import os
 import logging
 
-from scripts.containers import showContainers, showLogs
+from scripts.containers import showContainers, showLogs, stopContainer
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=logging.INFO)
 load_dotenv()
 dclient = docker.from_env()
 
-ACTIONS, CONTAINERS, LOGSCONTAINERS = range(3)
+ACTIONS, CONTAINERS, LOGSCONTAINERS, STOPCONTAINER = range(4)
 
 def start(update, context):
     first_keyboard = [
@@ -33,7 +35,7 @@ def start(update, context):
 
 def containers(update, context):
     containers_keyboard = [
-        ['Show containers', 'Container logs'],
+        ['Show containers', 'Container logs', 'Stop container'],
         ['Go back']
     ]
     reply_markup = ReplyKeyboardMarkup(containers_keyboard, resize_keyboard=True)
@@ -50,23 +52,24 @@ def showContainersCommand(update, context):
         text_formated = 'Id: `%s`\nName: %s\nStatus: %s' % (container['Id'], container['Name'], container['Status'])
         context.bot.send_message(chat_id=update.effective_chat.id, text=text_formated)
 
-def showContainerLogs(update, context):
+def showContainerList(update, context):
     logging.info(msg='Gettings containers')
     containers = showContainers()
     container_name = []
     for container in containers:
         container_name.append(container['Name'])
-        #text_formated = 'Id: `%s`\nName: %s' % (container['Id'], container['Name'])
-        #context.bot.send_message(chat_id=update.effective_chat.id, text=text_formated)
 
-    containers_logs = [
+    containerList = [
         container_name,
         ['Go back']
     ]
-    reply_markup = ReplyKeyboardMarkup(containers_logs, resize_keyboard=True)
+    reply_markup = ReplyKeyboardMarkup(containerList, resize_keyboard=True)
     context.bot.send_message(chat_id=update.effective_chat.id,text="Select a container",reply_markup=reply_markup)
 
-    return LOGSCONTAINERS
+    if re.search('^Container logs$', update.message.text):
+        return LOGSCONTAINERS
+    elif re.search('^Stop container$', update.message.text):
+        return STOPCONTAINER
 
 def showContainerLogsId(update, context):
     logging.info(msg='Show ' + update.effective_message.text + ' logs')
@@ -77,6 +80,15 @@ def showContainerLogsId(update, context):
     else:
         context.bot.send_message(chat_id=update.effective_chat.id,text=logs)
 
+def stopContainers(update, context):
+    logging.info(msg='Stopping ' + update.effective_message.text + ' container')
+    stopLog = stopContainer(update.effective_message.text)
+    if stopLog == None:
+        context.bot.send_message(chat_id=update.effective_chat.id,text="Container stopped succesfuly")
+    else:
+        context.bot.send_message(chat_id=update.effective_chat.id,text="Container stopped error")
+        context.bot.send_message(chat_id=update.effective_chat.id,text=stopLog)
+    return STOPCONTAINER
 
 # Functions
 def helper(update, context):
@@ -106,12 +118,17 @@ def main():
             ],
             CONTAINERS: [
                 MessageHandler(Filters.regex('^Show containers$'), showContainersCommand),
-                MessageHandler(Filters.regex('^Container logs$'), showContainerLogs),
+                MessageHandler(Filters.regex('^Container logs$'), showContainerList),
+                MessageHandler(Filters.regex('^Stop container$'), showContainerList),
                 MessageHandler(Filters.regex('^Go back$'), start)
             ],
             LOGSCONTAINERS: [
-                MessageHandler(Filters.regex('^Go back$'), start),
+                MessageHandler(Filters.regex('^Go back$'), containers),
                 MessageHandler(Filters.text, showContainerLogsId)
+            ],
+            STOPCONTAINER: [
+                MessageHandler(Filters.regex('^Go back$'), containers),
+                MessageHandler(Filters.text, stopContainers)
             ]
         },
         fallbacks=[
