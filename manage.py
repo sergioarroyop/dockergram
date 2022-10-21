@@ -82,12 +82,12 @@ def showContainerLogsId(update, context):
 
 def stopContainers(update, context):
     logging.info(msg='Stopping ' + update.effective_message.text + ' container')
-    stopLog = stopContainer(update.effective_message.text)
-    if stopLog == None:
+    stop_log = stopContainer(update.effective_message.text)
+    if stop_log == None:
         context.bot.send_message(chat_id=update.effective_chat.id,text="Container stopped succesfuly")
     else:
         context.bot.send_message(chat_id=update.effective_chat.id,text="Container stopped error")
-        context.bot.send_message(chat_id=update.effective_chat.id,text=stopLog)
+        context.bot.send_message(chat_id=update.effective_chat.id,text=stop_log)
     return STOPCONTAINER
 
 # Functions
