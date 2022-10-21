@@ -24,6 +24,6 @@ def showLogs(name):
 
 def stopContainer(name):
     container = client.containers.get(name)
-    stopContainer = container.stop()
+    stop_container = container.stop()
 
-    return stopContainer
+    return stop_container
