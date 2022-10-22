@@ -1,3 +1,4 @@
-docker==4.3.1
-python-dotenv==0.14.0
-python-telegram-bot==13.0
+docker==5.0.3
+python-dotenv==0.21.0
+python-telegram-bot==13.14
+emoji==2.1.0

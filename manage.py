@@ -1,36 +1,55 @@
+from email.mime import image
 from telegram.ext import Updater
-from telegram.ext import CommandHandler
+from telegram.ext.filters import Filters
+from telegram.ext import CommandHandler, MessageHandler, ConversationHandler
 from dotenv import load_dotenv
+import emoji
 import os
 import logging
+import constantActions
+import telegramFunctions.menu as menuFunctions, telegramFunctions.containers as containerFunctions, telegramFunctions.images as imageFunctions
 
-from containers import showContainers
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=logging.INFO)
 load_dotenv()
-dclient = docker.from_env()
-
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
-
-def showContainersCommand(update, context):
-    containers = showContainers()
-    for container in containers:
-        text_formated = 'Id: ' + container['Id'] + '\n' + 'Name: ' + container['Name'] + '\n' + 'Status: ' + container['Status']
-        context.bot.send_message(chat_id=update.effective_chat.id, text=text_formated)
-
-def helper(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="This are the availables commands:\n /help\n /show_containers")
 
 def main():
 
     updater = Updater(token=os.getenv("BOT_TOKEN"), use_context=True)
     ud = updater.dispatcher
 
-    ud.add_handler(CommandHandler('start', start))
-    ud.add_handler(CommandHandler('show_containers', showContainersCommand))
-    ud.add_handler(CommandHandler('help', helper))
-
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', menuFunctions.start)],
+        states={
+            constantActions.ACTIONS: [
+                MessageHandler(Filters.regex('^Containers \N{package}$'), menuFunctions.containers),
+                MessageHandler(Filters.regex('^Images \N{page facing up}$'), menuFunctions.images),
+                MessageHandler(Filters.regex('^Help \N{gear}$'), menuFunctions.helper),
+            ],
+            constantActions.CONTAINERS: [
+                MessageHandler(Filters.regex('^Show containers$'), containerFunctions.showContainersCommand),
+                MessageHandler(Filters.regex('^Container logs$'), containerFunctions.showContainerListCommand),
+                MessageHandler(Filters.regex('^Stop container$'), containerFunctions.showContainerListCommand),
+                MessageHandler(Filters.regex('^Go back$'), menuFunctions.start)
+            ],
+            constantActions.LOGSCONTAINERS: [
+                MessageHandler(Filters.regex('^Go back$'), menuFunctions.containers),
+                MessageHandler(Filters.text, containerFunctions.showContainerLogsId)
+            ],
+            constantActions.STOPCONTAINER: [
+                MessageHandler(Filters.regex('^Go back$'), menuFunctions.containers),
+                MessageHandler(Filters.text, containerFunctions.stopContainers)
+            ],
+            constantActions.IMAGES: [
+                MessageHandler(Filters.regex('^Show images$'), imageFunctions.showImagesCommand),
+                MessageHandler(Filters.regex('^Go back$'), menuFunctions.start)
+            ]
+        },
+        fallbacks=[
+            MessageHandler(Filters.regex('^Exit \N{door}'), menuFunctions.done)
+        ]
+    )
+    
+    ud.add_handler(conv_handler)
     updater.start_polling()
 
     updater.idle()
