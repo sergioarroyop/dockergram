@@ -11,16 +11,17 @@ import os
 import logging
 
 from scripts.containers import showContainers, showLogs, stopContainer
+from scripts.images import showImages
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',level=logging.INFO)
 load_dotenv()
 dclient = docker.from_env()
 
-ACTIONS, CONTAINERS, LOGSCONTAINERS, STOPCONTAINER = range(4)
+ACTIONS, CONTAINERS, LOGSCONTAINERS, STOPCONTAINER, IMAGES = range(5)
 
 def start(update, context):
     first_keyboard = [
-        ['Help \N{gear}', 'Containers \N{package}'], 
+        ['Help \N{gear}', 'Containers \N{package}', 'Images \N{page facing up}'], 
         #['images', 'volumes'],
         ['Exit \N{door}']
     ]
@@ -43,16 +44,26 @@ def containers(update, context):
 
     return CONTAINERS
 
+def images(update, context):
+    images_keyboard = [
+        ['Show images'],
+        ['Go back']
+    ]
+    reply_markup = ReplyKeyboardMarkup(images_keyboard, resize_keyboard=True)
+    context.bot.send_message(chat_id=update.effective_chat.id,text="Images menu",reply_markup=reply_markup)
+
+    return IMAGES
+
 # Functions
 def showContainersCommand(update, context):
     logging.info(msg='Showing containers')
     containers = showContainers()
     context.bot.send_message(chat_id=update.effective_chat.id, text="These are your running containers")
     for container in containers:
-        text_formated = 'Id: `%s`\nName: %s\nStatus: %s' % (container['Id'], container['Name'], container['Status'])
-        context.bot.send_message(chat_id=update.effective_chat.id, text=text_formated)
+        text_formated = 'Id:<code>%s</code>\nName:<code>%s</code>\nStatus:<code>%s</code>' % (container['Id'], container['Name'], container['Status'])
+        context.bot.send_message(chat_id=update.effective_chat.id, parse_mode='HTML',text=text_formated)
 
-def showContainerList(update, context):
+def showContainerListCommand(update, context):
     logging.info(msg='Gettings containers')
     containers = showContainers()
     container_name = []
@@ -90,6 +101,14 @@ def stopContainers(update, context):
         context.bot.send_message(chat_id=update.effective_chat.id,text=stop_log)
     return STOPCONTAINER
 
+def showImagesCommand(update, context):
+    logging.info(msg='Showing images')
+    images = showImages()
+    context.bot.send_message(chat_id=update.effective_chat.id, text="These are your images")
+    for image in images:
+        text_formated = 'Id:<code>%s</code>\nTags:<code>%s</code>' % (image['Id'], image['Tags'])
+        context.bot.send_message(chat_id=update.effective_chat.id, parse_mode='HTML', text=text_formated)
+
 # Functions
 def helper(update, context):
     help_text = """
@@ -114,12 +133,13 @@ def main():
         states={
             ACTIONS: [
                 MessageHandler(Filters.regex('^Containers \N{package}$'), containers),
+                MessageHandler(Filters.regex('^Images \N{page facing up}$'), images),
                 MessageHandler(Filters.regex('^Help \N{gear}$'), helper),
             ],
             CONTAINERS: [
                 MessageHandler(Filters.regex('^Show containers$'), showContainersCommand),
-                MessageHandler(Filters.regex('^Container logs$'), showContainerList),
-                MessageHandler(Filters.regex('^Stop container$'), showContainerList),
+                MessageHandler(Filters.regex('^Container logs$'), showContainerListCommand),
+                MessageHandler(Filters.regex('^Stop container$'), showContainerListCommand),
                 MessageHandler(Filters.regex('^Go back$'), start)
             ],
             LOGSCONTAINERS: [
@@ -129,6 +149,10 @@ def main():
             STOPCONTAINER: [
                 MessageHandler(Filters.regex('^Go back$'), containers),
                 MessageHandler(Filters.text, stopContainers)
+            ],
+            IMAGES: [
+                MessageHandler(Filters.regex('^Show images$'), showImagesCommand),
+                MessageHandler(Filters.regex('^Go back$'), start)
             ]
         },
         fallbacks=[
